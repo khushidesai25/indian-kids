@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ----------------------------
 # Visualization Functions
@@ -9,6 +10,12 @@ import matplotlib.pyplot as plt
 
 def show_basic_stats(df):
     try:
+        required_cols = ["Age", "Avg_Daily_Screen_Time"]
+        for col in required_cols:
+            if col not in df.columns:
+                messagebox.showerror("Error", f"Missing column: {col}")
+                return
+
         stats = (
             f"Total Records: {len(df)}\n"
             f"Average Age: {df['Age'].mean():.2f}\n"
@@ -21,12 +28,18 @@ def show_basic_stats(df):
 
 def plot_device_distribution(df):
     try:
-        df["Primary_Device"].value_counts().plot(
+        if "Primary_Device" not in df.columns:
+            messagebox.showerror("Error", "Missing column: Primary_Device")
+            return
+
+        device_counts = df["Primary_Device"].value_counts()
+        device_counts.plot(
             kind="pie",
             autopct="%1.1f%%",
             startangle=140,
-            title="Primary Device Usage",
-            ylabel=""
+            ylabel="",
+            labels=device_counts.index,
+            title="Primary Device Usage"
         )
         plt.show()
     except Exception as e:
@@ -35,6 +48,10 @@ def plot_device_distribution(df):
 
 def plot_gender_distribution(df):
     try:
+        if "Gender" not in df.columns:
+            messagebox.showerror("Error", "Missing column: Gender")
+            return
+
         df["Gender"].value_counts().plot(
             kind="bar",
             color=["#66b3ff", "#ff9999"],
@@ -49,6 +66,12 @@ def plot_gender_distribution(df):
 
 def plot_screen_time_by_age(df):
     try:
+        required_cols = ["Age", "Avg_Daily_Screen_Time"]
+        for col in required_cols:
+            if col not in df.columns:
+                messagebox.showerror("Error", f"Missing column: {col}")
+                return
+
         df.groupby("Age")["Avg_Daily_Screen_Time"].mean().plot(
             kind="line",
             marker="o",
@@ -66,11 +89,13 @@ def plot_screen_time_by_age(df):
 def correlation_analysis(df):
     try:
         df_numeric = df.select_dtypes(include="number")
-        plt.matshow(df_numeric.corr(), cmap="coolwarm")
-        plt.colorbar()
-        plt.title("Correlation Heatmap", pad=20)
-        plt.xticks(range(len(df_numeric.columns)), df_numeric.columns, rotation=45, ha="left")
-        plt.yticks(range(len(df_numeric.columns)), df_numeric.columns)
+        if df_numeric.empty:
+            messagebox.showerror("Error", "No numeric columns for correlation analysis.")
+            return
+
+        plt.figure(figsize=(8,6))
+        sns.heatmap(df_numeric.corr(), annot=True, cmap="coolwarm")
+        plt.title("Correlation Heatmap")
         plt.show()
     except Exception as e:
         messagebox.showerror("Error", f"Cannot generate correlation heatmap:\n{e}")
@@ -83,30 +108,32 @@ class ScreentimeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Indian Kids Screentime 2025")
-        self.root.geometry("500x350")
+        self.root.geometry("600x400")
 
         self.df = None
 
-        tk.Button(root, text="📂 Load Screentime CSV", command=self.load_csv, width=30).pack(pady=10)
-        tk.Button(root, text="📊 Show Basic Stats", command=self.show_stats, width=30).pack(pady=5)
-        tk.Button(root, text="📱 Device Usage Chart", command=self.device_chart, width=30).pack(pady=5)
-        tk.Button(root, text="🚻 Gender Distribution Chart", command=self.gender_chart, width=30).pack(pady=5)
-        tk.Button(root, text="📈 Screen Time by Age", command=self.age_chart, width=30).pack(pady=5)
-        tk.Button(root, text="🔍 Correlation Analysis", command=self.show_corr, width=30).pack(pady=5)
+        buttons = [
+            ("📂 Load Screentime CSV", self.load_csv),
+            ("📊 Show Basic Stats", self.show_stats),
+            ("📱 Device Usage Chart", self.device_chart),
+            ("🚻 Gender Distribution Chart", self.gender_chart),
+            ("📈 Screen Time by Age", self.age_chart),
+            ("🔍 Correlation Analysis", self.show_corr)
+        ]
+
+        for text, cmd in buttons:
+            tk.Button(root, text=text, command=cmd, width=35).pack(pady=8)
 
     # ----------------------------
     # Button Actions
     # ----------------------------
     def load_csv(self):
         try:
-            # Load dataset directly from GitHub
             url = "https://raw.githubusercontent.com/kjahanvi/indian-kids-screentime-2025/main/indian_kids_screentime_2025.csv"
             self.df = pd.read_csv(url)
             messagebox.showinfo("Success", f"Dataset loaded from GitHub!\n{len(self.df)} records.")
         except Exception as e:
             messagebox.showerror("Error", f"Could not load dataset:\n{e}")
-
-
 
     def show_stats(self):
         if self.df is not None:
@@ -145,4 +172,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = ScreentimeApp(root)
     root.mainloop()
-
